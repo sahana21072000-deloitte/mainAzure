@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:azure-storage="http://www.mulesoft.org/schema/mule/azure-storage" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/azure-storage http://www.mulesoft.org/schema/mule/azure-storage/current/mule-azure-storage.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2ca46b3b-cb1f-46c8-a8d6-fe876bd4283e" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<azure-cosmos-db-connector-mule-4:key-token-config name="Azure_Cosmos_Db_Key_Token_Config" doc:name="Azure Cosmos Db Key Token Config" doc:id="7f2675dc-c3da-4401-a92b-d4d472f567fd" >
+		<azure-cosmos-db-connector-mule-4:key-token-auth-connection baseUri="https://sahanasonu.documents.azure.com:443/" key="IOxKepJzZRuEnqVWENt6YFk20J647gkBOGJEBoDndGb9JhEQP2o1M0KAmkxOU2IdEiLAbGQZqjXCACDb485v9A==" version="2018-12-31" />
+	</azure-cosmos-db-connector-mule-4:key-token-config>
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="dc69af0a-25cf-44d8-9a9c-06a3b09c0aa0" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<azure-storage:config name="Azure_Storage_Config" doc:name="Azure Storage Config" doc:id="5b80c18c-7f6f-4619-9edb-e7b862c7dd59" >
+		<azure-storage:access-key-azure-connection accountName="minitestassg" accountKey="DefaultEndpointsProtocol=https;AccountName=minitestassg;AccountKey=vsriAON6X4hFj5wGyGtJWG07bF7pzaWAaYQ0QL5VOq6SX0FEVt1fEVqOuvlJr3/wbYAmCTFBOvhS+AStyg24SA==;EndpointSuffix=core.windows.net" />
+	</azure-storage:config>
+	<flow name="main-azureFlow" doc:id="a30d9d8f-356d-4785-85e7-91dc0abf8253" >
+		<http:listener doc:name="Listener" doc:id="fc3727e3-b63d-4289-98cc-bf5b519b0df5" config-ref="HTTP_Listener_config" path="/list"/>
+		<azure-cosmos-db-connector-mule-4:list-documents doc:name="List Documents" doc:id="57f407d2-fb39-41ff-a2c8-fca30e324208" config-ref="Azure_Cosmos_Db_Key_Token_Config" dbIdUriParam="azuresahana" collIdUriParam="items"/>
+		<ee:transform doc:name="Transform Message" doc:id="5fe066dd-08c6-40b3-84f5-27f4f5b932b3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<azure-storage:upload-blob doc:name="Upload blob" doc:id="964e05ab-d264-47fa-8f88-b208626250f6" config-ref="Azure_Storage_Config">
+			<azure-storage:storblob container='#["createcon"]' fileName='#["createfile.json"]' fileStream="#[payload]" />
+		</azure-storage:upload-blob>
+		<ee:transform doc:name="Transform Message" doc:id="a3a2f36b-0d45-4589-977b-75bc98a4185e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="main-azureFlow1" doc:id="301c3858-cbf6-455d-9946-274ba692a4ef" >
+		<http:listener doc:name="Listener" doc:id="7f3f6694-7c3d-4481-9759-e530b063b8d9" config-ref="HTTP_Listener_config1" path="/create"/>
+		<azure-cosmos-db-connector-mule-4:create-document doc:name="Create Document" doc:id="83d179c0-571e-4fcc-811b-de6eb47aa839" config-ref="Azure_Cosmos_Db_Key_Token_Config" dbIdUriParam="azuresahana" collIdUriParam="items" xMsIndexingDirectiveHeader="INCLUDE" xMsDocumentdbPartitionkeyHeader="#[write([payload.id], 'application/json')]"/>
+		<ee:transform doc:name="Transform Message" doc:id="855f57c0-838a-46ea-9c6b-259e754089cc" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
